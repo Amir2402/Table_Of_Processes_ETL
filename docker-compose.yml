@@ -1,0 +1,56 @@
+version : '3.8' 
+
+networks : 
+  myproject : 
+    driver : bridge 
+    name : myproject 
+    ipam:
+      config :
+        - subnet : 172.18.0.0/16
+          gateway : 172.18.0.1
+
+services : 
+  zookeeper :
+    image: bitnami/zookeeper:latest
+    container_name : zookeeper 
+    hostname: zookeeper
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+    networks : 
+      myproject  :
+        ipv4_address: 172.18.0.2 
+
+  kafka : 
+      image : bitnami/kafka:latest
+      depends_on : 
+        - zookeeper 
+      container_name : kafka 
+      hostname : kafka 
+      environment:
+        - KAFKA_CFG_NODE_ID=0
+        - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+        - KAFKA_CFG_LISTENERS=PLAINTEXT://172.18.0.3:9092
+        - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://172.18.0.3:9092
+        - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT   
+      networks : 
+        myproject : 
+          ipv4_address: 172.18.0.3
+
+  spark : 
+      image : bitnami/spark:latest 
+      container_name : sparkm
+      hostname : spark 
+      networks : 
+        myproject : 
+          ipv4_address: 172.18.0.4
+      environment : 
+        - SPARK_MODE=master
+      ports :
+        - "8080:8080"
+        - "7070:7070" 
+        - "4040:4040"
+      volumes : 
+        - ./sparkConsume.py:/opt/bitnami/spark/vol/sparkConsume.py
+        - ./.env:/opt/bitnami/spark/vol/.env
